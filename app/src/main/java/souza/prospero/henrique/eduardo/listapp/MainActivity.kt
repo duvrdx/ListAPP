@@ -1,23 +1,19 @@
 package souza.prospero.henrique.eduardo.listapp
 
+import Item
+import ItemsViewModel
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
@@ -25,7 +21,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -36,37 +40,30 @@ import androidx.compose.ui.unit.sp
 import souza.prospero.henrique.eduardo.listapp.ui.theme.ListAPPTheme
 
 class MainActivity : ComponentActivity() {
-    private val contentList: List<Content> = listOf(
-        Content(
-            imageId = R.drawable.ic_launcher_foreground,
-            title = "Titulo", description = "Descrição"
-        )
-    )
+    private val itemsViewModel: ItemsViewModel by lazy { ItemsViewModel.getInstance() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        println(itemsViewModel.getItems())
+
         setContent {
             ListAPPTheme {
-
-                ListItemsView(
-                    contentList
-                )
+                // Observe o estado da UI
+                val uiState by itemsViewModel.uiState.collectAsState() // Colete o estado da ViewModel
+                ListItemsView(uiState.items) // Passa a lista de itens
             }
         }
     }
 }
 
-data class Content(val imageId: Int, val title: String, val description: String)
-
-
 @Composable
-fun ListItemsView(contentList: List<Content>) {
+fun ListItemsView(items: List<Item>) {
     val context = LocalContext.current
 
     Scaffold(
         floatingActionButton = {
-            val context = LocalContext.current
             FloatingActionButton(
                 onClick = {
                     context.startActivity(Intent(context, NewItemActivity::class.java))
@@ -79,74 +76,67 @@ fun ListItemsView(contentList: List<Content>) {
         LazyColumn(
             modifier = Modifier.padding(innerPadding)
         ) {
-
-            items(contentList) { content ->
-                ImageHolder(modifier = Modifier.heightIn(max = 100.dp), content = content)
-
+            items(items) { content ->
+                ImageHolder(content = content) // Renderiza cada item
             }
         }
     }
 }
 
+
+
 @Composable
-fun ImageHolder(modifier: Modifier = Modifier, content: Content) {
+fun ImageHolder(content: Item) {
     Row(
-        modifier = modifier
-            .fillMaxSize()
+        modifier = Modifier
             .padding(8.dp)
+            .border(1.dp, Color.Gray)
     ) {
-        Column(modifier = modifier.weight(1F)) {
-            Image(
-                painter = painterResource(id = content.imageId),
-                contentDescription = null,
-                modifier = modifier.fillMaxSize()
-            )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(72.dp) // Tamanho fixo para as imagens
+                    .aspectRatio(1f) // Mantém a proporção quadrada
+
+            ) {
+                Image(
+                    painter = if (content.bitmap != null) {
+                        BitmapPainter(content.bitmap!!.asImageBitmap())
+                    } else {
+                        painterResource(id = R.drawable.baseline_image_24)
+                    },
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center) // Alinha a imagem ao centro
+                )
+            }
         }
         Column(
-            modifier = modifier
-                .weight(4F)
+            modifier = Modifier
+                .weight(4f)
+                .fillMaxHeight()
                 .padding(8.dp)
         ) {
-            Text(
-                text = content.title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                modifier = modifier
-                    .weight(1F)
-                    .fillMaxWidth()
-            )
-            Spacer(modifier.height(8.dp))
-            Text(
-                text = content.description, modifier = modifier
-                    .weight(2F)
-                    .fillMaxWidth()
-            )
+            Text(text = content.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = content.description)
         }
     }
 }
 
 
+
+
 @Preview(showBackground = true)
 @Composable
 fun ListItemsViewPreview() {
-    val mock: List<Content> = listOf(
-        Content(
-            imageId = R.drawable.ic_launcher_foreground,
-            title = "Titulo 1", description = "Descrição"
-        ),
-        Content(
-            imageId = R.drawable.ic_launcher_foreground,
-            title = "Titulo 2", description = "Descrição"
-        ),
-        Content(
-            imageId = R.drawable.ic_launcher_foreground,
-            title = "Titulo 3", description = "Descrição"
-        ),
-        Content(
-            imageId = R.drawable.ic_launcher_foreground,
-            title = "Titulo 4", description = "Descrição"
-        )
-    )
-
-    ListItemsView(mock)
+    ListItemsView(items = listOf(
+        Item(title = "Item 1", description = "Descrição do Item 1"),
+        Item(title = "Item 2", description = "Descrição do Item 2")
+    ))
 }
